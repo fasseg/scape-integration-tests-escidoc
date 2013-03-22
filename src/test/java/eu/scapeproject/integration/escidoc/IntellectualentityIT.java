@@ -11,6 +11,7 @@ import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
+import org.junit.Before;
 import org.junit.Test;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -26,7 +27,7 @@ public class IntellectualentityIT {
     private HttpClient client = new DefaultHttpClient();
     private static final String ESCIDOC_URI = "http://localhost:8080";
     private static final String ENDPOINT_ENTITY = ESCIDOC_URI + "/scape/entity";
-
+    
     @Test
     public void ingestAndRetrieveIntellectualEntity() throws Exception {
         InputStream src = this.getClass().getClassLoader().getResourceAsStream("SCAPE_entity_example.xml");
