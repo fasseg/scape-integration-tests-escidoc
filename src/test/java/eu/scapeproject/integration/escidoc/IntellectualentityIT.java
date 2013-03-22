@@ -1,6 +1,6 @@
 package eu.scapeproject.integration.escidoc;
 
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 import java.io.InputStream;
 
@@ -28,7 +28,7 @@ public class IntellectualentityIT {
     private static final String ENDPOINT_ENTITY = ESCIDOC_URI + "/scape/entity";
 
     @Test
-    public void ingestIntellectualEntity() throws Exception {
+    public void ingestAndRetrieveIntellectualEntity() throws Exception {
         InputStream src = this.getClass().getClassLoader().getResourceAsStream("SCAPE_entity_example.xml");
         HttpPost post = new HttpPost(ENDPOINT_ENTITY);
         post.setEntity(new InputStreamEntity(src, -1));
@@ -53,6 +53,71 @@ public class IntellectualentityIT {
         
         /* compare the fetched with the local entity */
         assertTrue("Identifier is not equal", orig.getIdentifier().getValue().equals(fetched.getIdentifier().getValue()));
+    }
+    
+    @Test
+    public void retrieveMetadata() throws Exception {
+        fail("Not yet implemented!");
+    }
+    
+    @Test
+    public void retrieveIntellectualEntitySet() throws Exception {
+        fail("Not yet implemented!");
+    }
+    
+    @Test
+    public void ingestAndRetrieveIntellectualEntityAsync() throws Exception {
+        fail("Not yet implemented!");
+    }
+    
+    @Test
+    public void updateAndRetrieveIntellectualEntity() throws Exception {
+        fail("Not yet implemented!");
+    }
+    
+    @Test
+    public void retrieveEntityVersionList() throws Exception {
+        fail("Not yet implemented!");
+    }
+    
+    @Test
+    public void retrieveFile() throws Exception {
+        fail("Not yet implemented!");
+    }
+    
+    @Test
+    public void retrieveBitStream() throws Exception {
+        fail("Not yet implemented!");
+    }
+    
+    @Test
+    public void searchIntellectualEntity() throws Exception {
+        fail("Not yet implemented!");
+    }
+    
+    @Test
+    public void searchFiles() throws Exception {
+        fail("Not yet implemented!");
+    }
+    
+    @Test
+    public void retrieveEntityLifecycleState() throws Exception {
+        fail("Not yet implemented!");
+    }
+    
+    @Test
+    public void retrieveRepresentation() throws Exception {
+        fail("Not yet implemented!");
+    }
+    
+    @Test
+    public void updateRepresentation() throws Exception {
+        fail("Not yet implemented!");
+    }
+    
+    @Test
+    public void updateMetadata() throws Exception {
+        fail("Not yet implemented!");
     }
 
 }
