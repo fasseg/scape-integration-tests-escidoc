@@ -30,7 +30,7 @@ public class IntellectualentityIT {
     
     @Test
     public void ingestAndRetrieveIntellectualEntity() throws Exception {
-        InputStream src = this.getClass().getClassLoader().getResourceAsStream("SCAPE_entity_example.xml");
+        InputStream src = this.getClass().getClassLoader().getResourceAsStream("entity_serialized.xml");
         HttpPost post = new HttpPost(ENDPOINT_ENTITY);
         post.setEntity(new InputStreamEntity(src, -1));
         HttpResponse resp = client.execute(post);
