@@ -8,6 +8,8 @@ import java.io.InputStream;
 import java.net.URLEncoder;
 import java.util.concurrent.TimeUnit;
 
+import javax.xml.bind.JAXBElement;
+
 import org.apache.commons.io.IOUtils;
 import org.apache.http.Header;
 import org.apache.http.HttpResponse;
@@ -32,6 +34,7 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.purl.dc.elements._1.ElementContainer;
+import org.purl.dc.elements._1.SimpleLiteral;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -64,7 +67,7 @@ public class IntellectualentityIT {
 		/* then POST the username password combo using the cookie from the previuous GET */
 		HttpPost post = new HttpPost(ENDPOINT_AUTH);
 		post.setEntity(new StringEntity("j_username=" + ESCIDOC_USER + "&j_password=" + ESCIDOC_PASS));
-		post.setHeader("Content-Type","application/x-www-form-urlencoded");
+		post.setHeader("Content-Type", "application/x-www-form-urlencoded");
 		resp = client.execute(post);
 		post.releaseConnection();
 
@@ -73,7 +76,7 @@ public class IntellectualentityIT {
 		resp = client.execute(get);
 		get.releaseConnection();
 	}
-	
+
 	@Test
 	public void ingestAndRetrieveIntellectualEntity() throws Exception {
 		InputStream src = this.getClass().getClassLoader().getResourceAsStream("entity_serialized.xml");
@@ -128,13 +131,29 @@ public class IntellectualentityIT {
 		String id = IOUtils.toString(resp.getEntity().getContent());
 		id = id.substring(id.indexOf("<scape:value>") + 13, id.indexOf("</scape:value")).trim();
 		logger.debug("ingested object with id " + id);
+		post.releaseConnection();
 
+		/* Wait a bit for the metadata to be indexed */
+		Thread.sleep(5000);
+		
 		/* fetch descriptive metadata from container */
 		HttpGet get = new HttpGet(ENDPOINT_METADATA + "/" + id + "/DESCRIPTIVE/1");
 		resp = client.execute(get);
-		assertTrue("Unable to fetch metadata",resp.getStatusLine().getStatusCode() == 200);
+		if (resp.getStatusLine().getStatusCode() != 200){
+			logger.error(IOUtils.toString(resp.getEntity().getContent()));
+		}
+		assertTrue("Unable to fetch metadata. Server returned:" + resp.getStatusLine(), resp.getStatusLine().getStatusCode() == 200);
 		Object md = marshaller.deserialize(resp.getEntity().getContent());
 		assertTrue("Object is not of DC metadata type as excpected", md instanceof ElementContainer);
+		ElementContainer c = (ElementContainer) md;
+		boolean dcSuccess =false;
+		for (JAXBElement<SimpleLiteral> lit: c.getAny()){
+			if (lit.getName().getLocalPart().equals("title") && lit.getValue().getContent().get(0).equals("Object 1")){
+				dcSuccess = true;
+			}
+		}
+		assertTrue("DC record could not be verified", dcSuccess);
+		get.releaseConnection();
 	}
 
 	@Test
