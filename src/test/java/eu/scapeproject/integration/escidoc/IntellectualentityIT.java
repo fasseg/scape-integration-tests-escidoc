@@ -25,6 +25,7 @@ import org.apache.http.impl.cookie.BrowserCompatSpec;
 import org.apache.http.impl.cookie.BrowserCompatSpecFactory;
 import org.apache.http.impl.cookie.CookieSpecBase;
 import org.apache.http.util.EntityUtils;
+import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
@@ -52,40 +53,23 @@ public class IntellectualentityIT {
 		CookieStore cs = client.getCookieStore();
 
 		/* first a GET to the login url to get a cookie */
-		System.out.println("--------------------GET--------------------------");
-		System.out.println("-------------------------------------------------");
 		HttpGet get = new HttpGet(ENDPOINT_LOGIN);
 		HttpResponse resp = client.execute(get);
-		System.out.println("Response code: " + resp.getStatusLine());
 		get.releaseConnection();
-		for (Cookie c: client.getCookieStore().getCookies()){
-			System.out.println(c.getName() + ": " + c.getValue());
-		}
-		
+
 		/* then POST the username password combo using the cookie from the previuous GET */
-		System.out.println("--------------------POST-------------------------");
-		System.out.println("-------------------------------------------------");
 		HttpPost post = new HttpPost(ENDPOINT_AUTH);
 		post.setEntity(new StringEntity("j_username=" + ESCIDOC_USER + "&j_password=" + ESCIDOC_PASS));
 		post.setHeader("Content-Type","application/x-www-form-urlencoded");
 		resp = client.execute(post);
 		post.releaseConnection();
-		for (Cookie c: client.getCookieStore().getCookies()){
-			System.out.println(c.getName() + ": " + c.getValue());
-		}
 
 		/* now get the login url *AGAIN* to get a escidoc token */
-		System.out.println("--------------------GET--------------------------");
-		System.out.println("-------------------------------------------------");
 		get = new HttpGet(ENDPOINT_LOGIN);
 		resp = client.execute(get);
-		System.out.println("Response code: " + resp.getStatusLine());
 		get.releaseConnection();
-		for (Cookie c: client.getCookieStore().getCookies()){
-			System.out.println(c.getName() + ": " + c.getValue());
-		}
 	}
-
+	
 	@Test
 	public void ingestAndRetrieveIntellectualEntity() throws Exception {
 		InputStream src = this.getClass().getClassLoader().getResourceAsStream("entity_serialized.xml");
