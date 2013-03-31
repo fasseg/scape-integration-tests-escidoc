@@ -11,6 +11,7 @@ import info.lc.xmlns.textmd_v3.TextMD;
 import info.lc.xmlns.textmd_v3.TextMD.Encoding;
 import info.lc.xmlns.textmd_v3.TextMD.Encoding.EncodingPlatform;
 
+import java.io.IOException;
 import java.net.URI;
 import java.text.DateFormat;
 import java.text.SimpleDateFormat;
@@ -20,6 +21,8 @@ import java.util.Random;
 import javax.xml.bind.JAXBElement;
 import javax.xml.bind.JAXBException;
 
+import org.apache.commons.io.IOUtils;
+import org.apache.http.HttpResponse;
 import org.purl.dc.elements._1.ElementContainer;
 import org.purl.dc.elements._1.SimpleLiteral;
 
@@ -111,6 +114,11 @@ public abstract class TestUtil {
 		lit_title.getContent().add("Object 1");
 		cnt.getAny().add(dcFac.createTitle(lit_title));
 		return cnt;
+	}
+
+	public static String getPidFromResponse(HttpResponse resp) throws IOException{
+		String id = IOUtils.toString(resp.getEntity().getContent());
+		return id.substring(id.indexOf("<scape:value>") + 13, id.indexOf("</scape:value")).trim();
 	}
 
 }

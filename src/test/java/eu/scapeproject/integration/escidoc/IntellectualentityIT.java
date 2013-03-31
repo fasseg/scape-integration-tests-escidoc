@@ -1,36 +1,26 @@
 package eu.scapeproject.integration.escidoc;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.fail;
 
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
-import java.net.URLEncoder;
-import java.util.concurrent.TimeUnit;
+import java.util.ArrayList;
+import java.util.List;
 
 import javax.xml.bind.JAXBElement;
 
 import org.apache.commons.io.IOUtils;
-import org.apache.http.Header;
 import org.apache.http.HttpResponse;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CookieStore;
-import org.apache.http.client.HttpClient;
 import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpOptions;
 import org.apache.http.client.methods.HttpPost;
-import org.apache.http.cookie.Cookie;
-import org.apache.http.cookie.CookieOrigin;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.impl.cookie.BasicClientCookie;
-import org.apache.http.impl.cookie.BrowserCompatSpec;
-import org.apache.http.impl.cookie.BrowserCompatSpecFactory;
-import org.apache.http.impl.cookie.CookieSpecBase;
 import org.apache.http.util.EntityUtils;
-import org.junit.AfterClass;
-import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.purl.dc.elements._1.ElementContainer;
@@ -49,6 +39,7 @@ public class IntellectualentityIT {
 	private static final String ENDPOINT_AUTH = ESCIDOC_URI + "/aa/j_spring_security_check";
 	private static final String ENDPOINT_LOGIN = ESCIDOC_URI + "/aa/login";
 	private static final String ENDPOINT_ENTITY = ESCIDOC_URI + "/scape/entity";
+	private static final String ENDPOINT_ENTITY_SET = ESCIDOC_URI + "/scape/entity-list";
 	private static final String ENDPOINT_METADATA = ESCIDOC_URI + "/scape/metadata";
 	private static final String ESCIDOC_USER = "sysadmin";
 	private static final String ESCIDOC_PASS = "sys";
@@ -87,9 +78,7 @@ public class IntellectualentityIT {
 		assertTrue("Server returned " + resp.getStatusLine().toString(), resp.getStatusLine().getStatusCode() == 200);
 
 		/* get the pid from the response */
-		String id = IOUtils.toString(resp.getEntity().getContent());
-		EntityUtils.consumeQuietly(resp.getEntity());
-		id = id.substring(id.indexOf("<scape:value>") + 13, id.indexOf("</scape:value")).trim();
+		String id=TestUtil.getPidFromResponse(resp);
 		logger.debug("ingested object with id " + id);
 
 		post.releaseConnection();
@@ -128,8 +117,7 @@ public class IntellectualentityIT {
 		assertTrue("Server returned " + resp.getStatusLine().toString(), resp.getStatusLine().getStatusCode() == 200);
 
 		/* get the pid from the response */
-		String id = IOUtils.toString(resp.getEntity().getContent());
-		id = id.substring(id.indexOf("<scape:value>") + 13, id.indexOf("</scape:value")).trim();
+		String id=TestUtil.getPidFromResponse(resp);
 		logger.debug("ingested object with id " + id);
 		post.releaseConnection();
 
@@ -158,7 +146,54 @@ public class IntellectualentityIT {
 
 	@Test
 	public void retrieveIntellectualEntitySet() throws Exception {
-		fail("Not yet implemented!");
+		List<String> pids = new ArrayList<String>();
+		ScapeMarshaller marshaller = ScapeMarshaller.newInstance();
+		
+		/* ingest test entity 1*/
+		IntellectualEntity e = TestUtil.createTestEntity();
+		ByteArrayOutputStream sink = new ByteArrayOutputStream();
+		marshaller.serialize(e, sink);
+		HttpPost post = new HttpPost(ENDPOINT_ENTITY);
+		post.setEntity(new InputStreamEntity(new ByteArrayInputStream(sink.toByteArray()), -1));
+		logger.debug("ingesting entity at " + post.getURI().toASCIIString());
+		HttpResponse resp = client.execute(post);
+		assertTrue("Server returned " + resp.getStatusLine().toString(), resp.getStatusLine().getStatusCode() == 200);
+
+		/* get the pid from the response */
+		String id=TestUtil.getPidFromResponse(resp);
+		logger.debug("ingested object with id " + id);
+		pids.add(id);
+		post.releaseConnection();
+
+		/* ingest test entity 2*/
+		e = TestUtil.createTestEntity();
+		sink = new ByteArrayOutputStream();
+		marshaller.serialize(e, sink);
+		post = new HttpPost(ENDPOINT_ENTITY);
+		post.setEntity(new InputStreamEntity(new ByteArrayInputStream(sink.toByteArray()), -1));
+		logger.debug("ingesting entity at " + post.getURI().toASCIIString());
+		resp = client.execute(post);
+		assertTrue("Server returned " + resp.getStatusLine().toString(), resp.getStatusLine().getStatusCode() == 200);
+
+		/* get the pid from the response */
+		id=TestUtil.getPidFromResponse(resp);
+		logger.debug("ingested object with id " + id);
+		pids.add(id);
+		post.releaseConnection();
+
+		/* Wait a bit for the metadata to be indexed */
+		Thread.sleep(5000);
+		
+		/* retrieve the set consisting of the two entities */
+		post = new HttpPost(ENDPOINT_ENTITY_SET);
+		post.setEntity(new StringEntity("/scape/entity/" + pids.get(0) + "\n" + "/scape/entity/" + pids.get(1)));
+		resp = client.execute(post);
+		if (resp.getStatusLine().getStatusCode() != 200){
+			logger.error("Server returned " + resp.getStatusLine()  +"\n" + IOUtils.toString(resp.getEntity().getContent()));
+		}
+		assertTrue("Unable to fetch entity set from server", resp.getStatusLine().getStatusCode() == 200);
+		List<IntellectualEntity> entities = marshaller.parseCollection(IOUtils.toString(resp.getEntity().getContent()), IntellectualEntity.class, "entity-list");
+		assertTrue("Not all entities could be read from the server",entities.size() == 2);
 	}
 
 	@Test
