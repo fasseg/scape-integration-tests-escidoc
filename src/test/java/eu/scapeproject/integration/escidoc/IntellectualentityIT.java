@@ -2,6 +2,8 @@ package eu.scapeproject.integration.escidoc;
 
 import static org.junit.Assert.*;
 
+import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.net.URLEncoder;
 import java.util.concurrent.TimeUnit;
@@ -29,6 +31,7 @@ import org.junit.AfterClass;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
+import org.purl.dc.elements._1.ElementContainer;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -43,6 +46,7 @@ public class IntellectualentityIT {
 	private static final String ENDPOINT_AUTH = ESCIDOC_URI + "/aa/j_spring_security_check";
 	private static final String ENDPOINT_LOGIN = ESCIDOC_URI + "/aa/login";
 	private static final String ENDPOINT_ENTITY = ESCIDOC_URI + "/scape/entity";
+	private static final String ENDPOINT_METADATA = ESCIDOC_URI + "/scape/metadata";
 	private static final String ESCIDOC_USER = "sysadmin";
 	private static final String ESCIDOC_PASS = "sys";
 
@@ -109,7 +113,28 @@ public class IntellectualentityIT {
 
 	@Test
 	public void retrieveMetadata() throws Exception {
-		fail("Not yet implemented!");
+		ScapeMarshaller marshaller = ScapeMarshaller.newInstance();
+		/* ingest a test entity */
+		IntellectualEntity e = TestUtil.createTestEntity();
+		ByteArrayOutputStream sink = new ByteArrayOutputStream();
+		marshaller.serialize(e, sink);
+		HttpPost post = new HttpPost(ENDPOINT_ENTITY);
+		post.setEntity(new InputStreamEntity(new ByteArrayInputStream(sink.toByteArray()), -1));
+		logger.debug("ingesting entity at " + post.getURI().toASCIIString());
+		HttpResponse resp = client.execute(post);
+		assertTrue("Server returned " + resp.getStatusLine().toString(), resp.getStatusLine().getStatusCode() == 200);
+
+		/* get the pid from the response */
+		String id = IOUtils.toString(resp.getEntity().getContent());
+		id = id.substring(id.indexOf("<scape:value>") + 13, id.indexOf("</scape:value")).trim();
+		logger.debug("ingested object with id " + id);
+
+		/* fetch descriptive metadata from container */
+		HttpGet get = new HttpGet(ENDPOINT_METADATA + "/" + id + "/DESCRIPTIVE/1");
+		resp = client.execute(get);
+		assertTrue("Unable to fetch metadata",resp.getStatusLine().getStatusCode() == 200);
+		Object md = marshaller.deserialize(resp.getEntity().getContent());
+		assertTrue("Object is not of DC metadata type as excpected", md instanceof ElementContainer);
 	}
 
 	@Test
