@@ -13,14 +13,11 @@ import javax.xml.bind.JAXBElement;
 
 import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
-import org.apache.http.client.CookieStore;
 import org.apache.http.client.methods.HttpGet;
-import org.apache.http.client.methods.HttpOptions;
 import org.apache.http.client.methods.HttpPost;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
-import org.apache.http.util.EntityUtils;
 import org.junit.BeforeClass;
 import org.junit.Test;
 import org.purl.dc.elements._1.ElementContainer;
@@ -29,6 +26,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import eu.scapeproject.model.IntellectualEntity;
+import eu.scapeproject.model.IntellectualEntityCollection;
 import eu.scapeproject.util.ScapeMarshaller;
 
 public class IntellectualentityIT {
@@ -39,8 +37,10 @@ public class IntellectualentityIT {
 	private static final String ENDPOINT_AUTH = ESCIDOC_URI + "/aa/j_spring_security_check";
 	private static final String ENDPOINT_LOGIN = ESCIDOC_URI + "/aa/login";
 	private static final String ENDPOINT_ENTITY = ESCIDOC_URI + "/scape/entity";
+	private static final String ENDPOINT_ENTITY_ASYNC = ESCIDOC_URI + "/scape/entity-async";
 	private static final String ENDPOINT_ENTITY_SET = ESCIDOC_URI + "/scape/entity-list";
 	private static final String ENDPOINT_METADATA = ESCIDOC_URI + "/scape/metadata";
+	private static final String ENDPOINT_LIFECYCLE = ESCIDOC_URI + "/scape/lifecycle";
 	private static final String ESCIDOC_USER = "sysadmin";
 	private static final String ESCIDOC_PASS = "sys";
 
@@ -48,8 +48,6 @@ public class IntellectualentityIT {
 
 	@BeforeClass
 	public static void setup() throws Exception {
-		CookieStore cs = client.getCookieStore();
-
 		/* first a GET to the login url to get a cookie */
 		HttpGet get = new HttpGet(ENDPOINT_LOGIN);
 		HttpResponse resp = client.execute(get);
@@ -70,21 +68,25 @@ public class IntellectualentityIT {
 
 	@Test
 	public void ingestAndRetrieveIntellectualEntity() throws Exception {
-		InputStream src = this.getClass().getClassLoader().getResourceAsStream("entity_serialized.xml");
+		InputStream src = this.getClass().getClassLoader().getResourceAsStream("entity-noids.xml");
 		HttpPost post = new HttpPost(ENDPOINT_ENTITY);
 		post.setEntity(new InputStreamEntity(src, -1));
 		logger.debug("ingesting entity at " + post.getURI().toASCIIString());
 		HttpResponse resp = client.execute(post);
-		assertTrue("Server returned " + resp.getStatusLine().toString(), resp.getStatusLine().getStatusCode() == 200);
+		if (resp.getStatusLine().getStatusCode() != 200) {
+			logger.error(IOUtils.toString(resp.getEntity().getContent()));
+			post.releaseConnection();
+			fail("server returned " + resp.getStatusLine().getStatusCode());
+		}
 
 		/* get the pid from the response */
-		String id=TestUtil.getPidFromResponse(resp);
+		String id = TestUtil.getPidFromResponse(resp);
 		logger.debug("ingested object with id " + id);
 
 		post.releaseConnection();
 
 		/* load the intellectual entity from the local xml document for comparison */
-		src = this.getClass().getClassLoader().getResourceAsStream("entity_serialized.xml");
+		src = this.getClass().getClassLoader().getResourceAsStream("entity-noids.xml");
 		IntellectualEntity orig = ScapeMarshaller.newInstance().deserialize(IntellectualEntity.class, src);
 		IOUtils.closeQuietly(src);
 
@@ -97,7 +99,11 @@ public class IntellectualentityIT {
 		if (resp.getStatusLine().getStatusCode() != 200) {
 			logger.error(IOUtils.toString(resp.getEntity().getContent()));
 		}
-		assertTrue("Server returned " + resp.getStatusLine().toString(), resp.getStatusLine().getStatusCode() == 200);
+		if (resp.getStatusLine().getStatusCode() != 200) {
+			logger.error(IOUtils.toString(resp.getEntity().getContent()));
+			get.releaseConnection();
+			fail("server returned " + resp.getStatusLine().getStatusCode());
+		}
 		IntellectualEntity fetched = ScapeMarshaller.newInstance().deserialize(IntellectualEntity.class, resp.getEntity().getContent());
 		get.releaseConnection();
 		/* compare the fetched with the local entity */
@@ -114,29 +120,34 @@ public class IntellectualentityIT {
 		post.setEntity(new InputStreamEntity(new ByteArrayInputStream(sink.toByteArray()), -1));
 		logger.debug("ingesting entity at " + post.getURI().toASCIIString());
 		HttpResponse resp = client.execute(post);
-		assertTrue("Server returned " + resp.getStatusLine().toString(), resp.getStatusLine().getStatusCode() == 200);
+		if (resp.getStatusLine().getStatusCode() != 200) {
+			logger.error(IOUtils.toString(resp.getEntity().getContent()));
+			post.releaseConnection();
+			fail("server returned " + resp.getStatusLine().getStatusCode());
+		}
 
 		/* get the pid from the response */
-		String id=TestUtil.getPidFromResponse(resp);
+		String id = TestUtil.getPidFromResponse(resp);
 		logger.debug("ingested object with id " + id);
 		post.releaseConnection();
 
 		/* Wait a bit for the metadata to be indexed */
 		Thread.sleep(5000);
-		
+
 		/* fetch descriptive metadata from container */
 		HttpGet get = new HttpGet(ENDPOINT_METADATA + "/" + id + "/DESCRIPTIVE/1");
 		resp = client.execute(get);
-		if (resp.getStatusLine().getStatusCode() != 200){
+		if (resp.getStatusLine().getStatusCode() != 200) {
 			logger.error(IOUtils.toString(resp.getEntity().getContent()));
+			get.releaseConnection();
+			fail("server returned " + resp.getStatusLine().getStatusCode());
 		}
-		assertTrue("Unable to fetch metadata. Server returned:" + resp.getStatusLine(), resp.getStatusLine().getStatusCode() == 200);
 		Object md = marshaller.deserialize(resp.getEntity().getContent());
 		assertTrue("Object is not of DC metadata type as excpected", md instanceof ElementContainer);
 		ElementContainer c = (ElementContainer) md;
-		boolean dcSuccess =false;
-		for (JAXBElement<SimpleLiteral> lit: c.getAny()){
-			if (lit.getName().getLocalPart().equals("title") && lit.getValue().getContent().get(0).equals("Object 1")){
+		boolean dcSuccess = false;
+		for (JAXBElement<SimpleLiteral> lit : c.getAny()) {
+			if (lit.getName().getLocalPart().equals("title") && lit.getValue().getContent().get(0).equals("Object 1")) {
 				dcSuccess = true;
 			}
 		}
@@ -148,8 +159,8 @@ public class IntellectualentityIT {
 	public void retrieveIntellectualEntitySet() throws Exception {
 		List<String> pids = new ArrayList<String>();
 		ScapeMarshaller marshaller = ScapeMarshaller.newInstance();
-		
-		/* ingest test entity 1*/
+
+		/* ingest test entity 1 */
 		IntellectualEntity e = TestUtil.createTestEntity();
 		ByteArrayOutputStream sink = new ByteArrayOutputStream();
 		marshaller.serialize(e, sink);
@@ -157,15 +168,19 @@ public class IntellectualentityIT {
 		post.setEntity(new InputStreamEntity(new ByteArrayInputStream(sink.toByteArray()), -1));
 		logger.debug("ingesting entity at " + post.getURI().toASCIIString());
 		HttpResponse resp = client.execute(post);
-		assertTrue("Server returned " + resp.getStatusLine().toString(), resp.getStatusLine().getStatusCode() == 200);
+		if (resp.getStatusLine().getStatusCode() != 200) {
+			logger.error(IOUtils.toString(resp.getEntity().getContent()));
+			post.releaseConnection();
+			fail("server returned " + resp.getStatusLine().getStatusCode());
+		}
 
 		/* get the pid from the response */
-		String id=TestUtil.getPidFromResponse(resp);
+		String id = TestUtil.getPidFromResponse(resp);
 		logger.debug("ingested object with id " + id);
 		pids.add(id);
 		post.releaseConnection();
 
-		/* ingest test entity 2*/
+		/* ingest test entity 2 */
 		e = TestUtil.createTestEntity();
 		sink = new ByteArrayOutputStream();
 		marshaller.serialize(e, sink);
@@ -173,32 +188,66 @@ public class IntellectualentityIT {
 		post.setEntity(new InputStreamEntity(new ByteArrayInputStream(sink.toByteArray()), -1));
 		logger.debug("ingesting entity at " + post.getURI().toASCIIString());
 		resp = client.execute(post);
-		assertTrue("Server returned " + resp.getStatusLine().toString(), resp.getStatusLine().getStatusCode() == 200);
+		if (resp.getStatusLine().getStatusCode() != 200) {
+			logger.error(IOUtils.toString(resp.getEntity().getContent()));
+			post.releaseConnection();
+			fail("server returned " + resp.getStatusLine().getStatusCode());
+		}
 
 		/* get the pid from the response */
-		id=TestUtil.getPidFromResponse(resp);
+		id = TestUtil.getPidFromResponse(resp);
 		logger.debug("ingested object with id " + id);
 		pids.add(id);
 		post.releaseConnection();
 
 		/* Wait a bit for the metadata to be indexed */
 		Thread.sleep(5000);
-		
+
 		/* retrieve the set consisting of the two entities */
 		post = new HttpPost(ENDPOINT_ENTITY_SET);
 		post.setEntity(new StringEntity("/scape/entity/" + pids.get(0) + "\n" + "/scape/entity/" + pids.get(1)));
 		resp = client.execute(post);
-		if (resp.getStatusLine().getStatusCode() != 200){
-			logger.error("Server returned " + resp.getStatusLine()  +"\n" + IOUtils.toString(resp.getEntity().getContent()));
+		if (resp.getStatusLine().getStatusCode() != 200) {
+			logger.error(IOUtils.toString(resp.getEntity().getContent()));
+			post.releaseConnection();
+			fail("server returned " + resp.getStatusLine().getStatusCode());
 		}
-		assertTrue("Unable to fetch entity set from server", resp.getStatusLine().getStatusCode() == 200);
-		List<IntellectualEntity> entities = marshaller.parseCollection(IOUtils.toString(resp.getEntity().getContent()), IntellectualEntity.class, "entity-list");
-		assertTrue("Not all entities could be read from the server",entities.size() == 2);
+		IntellectualEntityCollection coll = marshaller.deserialize(IntellectualEntityCollection.class, resp.getEntity().getContent());
+		post.releaseConnection();
+		assertTrue("Not all entities could be read from the server", coll.getEntities().size() == 2);
 	}
 
 	@Test
 	public void ingestAndRetrieveIntellectualEntityAsync() throws Exception {
-		fail("Not yet implemented!");
+		ScapeMarshaller marshaller = ScapeMarshaller.newInstance();
+		/* ingest test entity 1 */
+		IntellectualEntity e = TestUtil.createTestEntity();
+		ByteArrayOutputStream sink = new ByteArrayOutputStream();
+		marshaller.serialize(e, sink);
+		HttpPost post = new HttpPost(ENDPOINT_ENTITY_ASYNC);
+		post.setEntity(new InputStreamEntity(new ByteArrayInputStream(sink.toByteArray()), -1));
+		logger.debug("ingesting entity at " + post.getURI().toASCIIString());
+		HttpResponse resp = client.execute(post);
+		if (resp.getStatusLine().getStatusCode() != 200) {
+			logger.error(IOUtils.toString(resp.getEntity().getContent()));
+			post.releaseConnection();
+			fail("server returned " + resp.getStatusLine().getStatusCode());
+		}
+		String id = TestUtil.getPidFromResponse(resp);
+		logger.debug("ingested entity with id " + id);
+		post.releaseConnection();
+		fail("Not yet finished!");
+
+		HttpGet get = new HttpGet(ENDPOINT_LIFECYCLE + "/" + id);
+		resp = client.execute(get);
+		if (resp.getStatusLine().getStatusCode() != 200) {
+			logger.error(IOUtils.toString(resp.getEntity().getContent()));
+			post.releaseConnection();
+			fail("server returned " + resp.getStatusLine().getStatusCode());
+		}
+		System.out.println(IOUtils.toString(resp.getEntity().getContent()));
+		get.releaseConnection();
+
 	}
 
 	@Test

@@ -44,7 +44,8 @@ public abstract class TestUtil {
 				.build();
 		File f = new File.Builder()
 				.bitStreams(Arrays.asList(bs_1))
-				.uri(URI.create("http://example.com/data"))
+				.uri(URI.create("http://localhost:8080/images/head-v0.1.png"))
+				.mimetype("image/png")
 				.technical(TestUtil.createTextMDRecord())
 				.build();
 		Representation rep = new Representation.Builder()

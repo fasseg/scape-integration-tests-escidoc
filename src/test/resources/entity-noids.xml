@@ -83,8 +83,8 @@
     </mets:amdSec>
     <mets:fileSec>
         <mets:fileGrp>
-            <mets:file ID="file-1" SEQ="0" ADMID="MD-b979976d-f235-4a45-b306-af2de1c7fc35">
-                <mets:FLocat xlink:href="http://example.com/data" LOCTYPE="URL"/>
+            <mets:file ID="file-1" SEQ="0" ADMID="MD-b979976d-f235-4a45-b306-af2de1c7fc35" MIMETYPE="image/png">
+                <mets:FLocat xlink:href="http://localhost:8080/images/head-v0.1.png" LOCTYPE="URL" TITLE="header_image"/>
                 <mets:stream ID="bitstream:1" ADMID="MD-b0dbb65b-849c-419b-a4a0-bfa48da967d1"/>
             </mets:file>
         </mets:fileGrp>
