@@ -40,6 +40,7 @@ public class IntellectualentityIT {
 	private static final String ENDPOINT_ENTITY = ESCIDOC_URI + "/scape/entity";
 	private static final String ENDPOINT_ENTITY_ASYNC = ESCIDOC_URI + "/scape/entity-async";
 	private static final String ENDPOINT_ENTITY_SET = ESCIDOC_URI + "/scape/entity-list";
+    private static final String ENDPOINT_ENTITY_SEARCH = ESCIDOC_URI + "/scape/sru/entities";
 	private static final String ENDPOINT_METADATA = ESCIDOC_URI + "/scape/metadata";
 	private static final String ENDPOINT_LIFECYCLE = ESCIDOC_URI + "/scape/lifecycle";
 	private static final String ESCIDOC_USER = "sysadmin";
@@ -273,7 +274,54 @@ public class IntellectualentityIT {
 
 	@Test
 	public void searchIntellectualEntity() throws Exception {
-		fail("Not yet implemented!");
+        List<String> pids = new ArrayList<String>();
+        ScapeMarshaller marshaller = ScapeMarshaller.newInstance();
+
+        /* ingest test entity 1 */
+        IntellectualEntity e = TestUtil.createTestEntity();
+        ByteArrayOutputStream sink = new ByteArrayOutputStream();
+        marshaller.serialize(e, sink);
+        HttpPost post = new HttpPost(ENDPOINT_ENTITY);
+        post.setEntity(new InputStreamEntity(new ByteArrayInputStream(sink.toByteArray()), -1));
+        logger.debug("ingesting entity at " + post.getURI().toASCIIString());
+        HttpResponse resp = client.execute(post);
+        if (resp.getStatusLine().getStatusCode() != 200) {
+            logger.error(IOUtils.toString(resp.getEntity().getContent()));
+            post.releaseConnection();
+            fail("server returned " + resp.getStatusLine().getStatusCode());
+        }
+
+        /* get the pid from the response */
+        String id = TestUtil.getPidFromResponse(resp);
+        logger.debug("ingested object with id " + id);
+        pids.add(id);
+        post.releaseConnection();
+
+        /* ingest test entity 2 */
+        e = TestUtil.createTestEntity();
+        sink = new ByteArrayOutputStream();
+        marshaller.serialize(e, sink);
+        post = new HttpPost(ENDPOINT_ENTITY);
+        post.setEntity(new InputStreamEntity(new ByteArrayInputStream(sink.toByteArray()), -1));
+        logger.debug("ingesting entity at " + post.getURI().toASCIIString());
+        resp = client.execute(post);
+        if (resp.getStatusLine().getStatusCode() != 200) {
+            logger.error(IOUtils.toString(resp.getEntity().getContent()));
+            post.releaseConnection();
+            fail("server returned " + resp.getStatusLine().getStatusCode());
+        }
+
+        /* get the pid from the response */
+        id = TestUtil.getPidFromResponse(resp);
+        logger.debug("ingested object with id " + id);
+        pids.add(id);
+        post.releaseConnection();
+        
+        HttpGet get = new HttpGet();
+        resp = client.execute(get);
+        IntellectualEntityCollection coll = marshaller.deserialize(IntellectualEntityCollection.class, resp.getEntity().getContent());
+        assertTrue(coll.getEntities().size() >= 2);
+        get.releaseConnection();
 	}
 
 	@Test
