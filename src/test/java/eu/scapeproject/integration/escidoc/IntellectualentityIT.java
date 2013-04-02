@@ -283,7 +283,36 @@ public class IntellectualentityIT {
 
 	@Test
 	public void retrieveEntityLifecycleState() throws Exception {
-		fail("Not yet implemented!");
+	    ScapeMarshaller marshaller = ScapeMarshaller.newInstance();
+        InputStream src = this.getClass().getClassLoader().getResourceAsStream("entity-noids.xml");
+        HttpPost post = new HttpPost(ENDPOINT_ENTITY);
+        post.setEntity(new InputStreamEntity(src, -1));
+        logger.debug("ingesting entity at " + post.getURI().toASCIIString());
+        HttpResponse resp = client.execute(post);
+        if (resp.getStatusLine().getStatusCode() != 200) {
+            logger.error(IOUtils.toString(resp.getEntity().getContent()));
+            post.releaseConnection();
+            fail("server returned " + resp.getStatusLine().getStatusCode());
+        }
+
+        /* get the pid from the response */
+        String id = TestUtil.getPidFromResponse(resp);
+        logger.debug("ingested object with id " + id);
+
+        post.releaseConnection();
+        
+        Thread.sleep(3000);
+        
+        /* now check for the lifecycle state */
+        HttpGet get = new HttpGet(ENDPOINT_LIFECYCLE + "/" + id);
+        resp = client.execute(get);
+        if (resp.getStatusLine().getStatusCode() != 200) {
+            logger.error(IOUtils.toString(resp.getEntity().getContent()));
+            get.releaseConnection();
+            fail("server returned " + resp.getStatusLine().getStatusCode());
+        }
+        LifecycleState state = (LifecycleState) marshaller.getJaxbUnmarshaller().unmarshal(resp.getEntity().getContent());
+        get.releaseConnection();
 	}
 
 	@Test
