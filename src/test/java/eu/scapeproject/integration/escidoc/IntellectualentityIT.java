@@ -27,6 +27,7 @@ import org.slf4j.LoggerFactory;
 
 import eu.scapeproject.model.IntellectualEntity;
 import eu.scapeproject.model.IntellectualEntityCollection;
+import eu.scapeproject.model.LifecycleState;
 import eu.scapeproject.util.ScapeMarshaller;
 
 public class IntellectualentityIT {
@@ -132,7 +133,7 @@ public class IntellectualentityIT {
 		post.releaseConnection();
 
 		/* Wait a bit for the metadata to be indexed */
-		Thread.sleep(5000);
+		Thread.sleep(1000);
 
 		/* fetch descriptive metadata from container */
 		HttpGet get = new HttpGet(ENDPOINT_METADATA + "/" + id + "/DESCRIPTIVE/1");
@@ -236,7 +237,6 @@ public class IntellectualentityIT {
 		String id = TestUtil.getPidFromResponse(resp);
 		logger.debug("ingested entity with id " + id);
 		post.releaseConnection();
-		fail("Not yet finished!");
 
 		HttpGet get = new HttpGet(ENDPOINT_LIFECYCLE + "/" + id);
 		resp = client.execute(get);
@@ -246,6 +246,7 @@ public class IntellectualentityIT {
 			fail("server returned " + resp.getStatusLine().getStatusCode());
 		}
 		System.out.println(IOUtils.toString(resp.getEntity().getContent()));
+//		LifecycleState state = (LifecycleState) marshaller.deserialize(resp.getEntity().getContent());
 		get.releaseConnection();
 
 	}
