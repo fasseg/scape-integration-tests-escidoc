@@ -15,6 +15,7 @@ import org.apache.commons.io.IOUtils;
 import org.apache.http.HttpResponse;
 import org.apache.http.client.methods.HttpGet;
 import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpPut;
 import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
@@ -251,16 +252,6 @@ public class IntellectualentityIT {
 	}
 
 	@Test
-	public void updateAndRetrieveIntellectualEntity() throws Exception {
-		fail("Not yet implemented!");
-	}
-
-	@Test
-	public void retrieveEntityVersionList() throws Exception {
-		fail("Not yet implemented!");
-	}
-
-	@Test
 	public void retrieveFile() throws Exception {
         ScapeMarshaller marshaller = ScapeMarshaller.newInstance();
         
@@ -304,11 +295,6 @@ public class IntellectualentityIT {
         }
         get.releaseConnection();
         
-	}
-
-	@Test
-	public void retrieveBitStream() throws Exception {
-		fail("Not yet implemented!");
 	}
 
 	@Test
@@ -363,10 +349,6 @@ public class IntellectualentityIT {
         get.releaseConnection();
 	}
 
-	@Test
-	public void searchFiles() throws Exception {
-		fail("Not yet implemented!");
-	}
 
 	@Test
 	public void retrieveEntityLifecycleState() throws Exception {
@@ -402,7 +384,53 @@ public class IntellectualentityIT {
         get.releaseConnection();
 	}
 
-	@Test
+    @Test
+    public void updateAndRetrieveIntellectualEntity() throws Exception {
+        InputStream src = this.getClass().getClassLoader().getResourceAsStream("entity-noids.xml");
+        HttpPost post = new HttpPost(ENDPOINT_ENTITY);
+        post.setEntity(new InputStreamEntity(src, -1));
+        logger.debug("ingesting entity at " + post.getURI().toASCIIString());
+        HttpResponse resp = client.execute(post);
+        if (resp.getStatusLine().getStatusCode() != 200) {
+            logger.error(IOUtils.toString(resp.getEntity().getContent()));
+            post.releaseConnection();
+            fail("server returned " + resp.getStatusLine().getStatusCode());
+        }
+
+        /* get the pid from the response */
+        String id = TestUtil.getPidFromResponse(resp);
+        logger.debug("ingested object with id " + id);
+        post.releaseConnection();
+        
+        /* wait a bit so escidoc can index the entity */
+        Thread.sleep(1000);
+        
+        /* update the entity */
+        src = this.getClass().getClassLoader().getResourceAsStream("entity-noids.xml");
+        HttpPut put = new HttpPut(ENDPOINT_ENTITY + "/" + id);
+        put.setEntity(new InputStreamEntity(src, -1));
+        resp = client.execute(put);
+        if (resp.getStatusLine().getStatusCode() != 200) {
+            logger.error(IOUtils.toString(resp.getEntity().getContent()));
+            post.releaseConnection();
+            fail("server returned " + resp.getStatusLine().getStatusCode());
+        }
+    }
+
+    @Test
+    public void retrieveEntityVersionList() throws Exception {
+        fail("Not yet implemented!");
+    }
+    @Test
+    public void retrieveBitStream() throws Exception {
+        fail("Not yet implemented!");
+    }
+    @Test
+    public void searchFiles() throws Exception {
+        fail("Not yet implemented!");
+    }
+
+    @Test
 	public void retrieveRepresentation() throws Exception {
 		fail("Not yet implemented!");
 	}
