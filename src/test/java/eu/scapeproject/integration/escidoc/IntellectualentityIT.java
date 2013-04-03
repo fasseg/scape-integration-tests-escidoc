@@ -358,7 +358,6 @@ public class IntellectualentityIT {
         
         HttpGet get = new HttpGet(ENDPOINT_ENTITY_SEARCH);
         resp = client.execute(get);
-        System.out.println(IOUtils.toString(resp.getEntity().getContent()));
         IntellectualEntityCollection coll = marshaller.deserialize(IntellectualEntityCollection.class, resp.getEntity().getContent());
         assertTrue(coll.getEntities().size() >= 2);
         get.releaseConnection();
