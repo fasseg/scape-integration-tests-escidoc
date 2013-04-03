@@ -419,30 +419,30 @@ public class IntellectualentityIT {
 
     @Test
     public void retrieveEntityVersionList() throws Exception {
-        fail("Not yet implemented!");
+        fail("Test not yet implemented");
     }
     @Test
     public void retrieveBitStream() throws Exception {
-        fail("Not yet implemented!");
+        fail("Test not yet implemented");
     }
     @Test
     public void searchFiles() throws Exception {
-        fail("Not yet implemented!");
+        fail("Test not yet implemented");
     }
 
     @Test
 	public void retrieveRepresentation() throws Exception {
-		fail("Not yet implemented!");
+        fail("Test not yet implemented");
 	}
 
 	@Test
 	public void updateRepresentation() throws Exception {
-		fail("Not yet implemented!");
+        fail("Test not yet implemented");
 	}
 
 	@Test
 	public void updateMetadata() throws Exception {
-		fail("Not yet implemented!");
+        fail("Test not yet implemented");
 	}
 
 }
