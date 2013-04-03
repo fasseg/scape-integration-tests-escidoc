@@ -25,6 +25,7 @@ import org.purl.dc.elements._1.SimpleLiteral;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import eu.scapeproject.model.File;
 import eu.scapeproject.model.IntellectualEntity;
 import eu.scapeproject.model.IntellectualEntityCollection;
 import eu.scapeproject.model.LifecycleState;
@@ -41,6 +42,7 @@ public class IntellectualentityIT {
 	private static final String ENDPOINT_ENTITY_ASYNC = ESCIDOC_URI + "/scape/entity-async";
 	private static final String ENDPOINT_ENTITY_SET = ESCIDOC_URI + "/scape/entity-list";
     private static final String ENDPOINT_ENTITY_SEARCH = ESCIDOC_URI + "/scape/sru/entities";
+    private static final String ENDPOINT_FILE = ESCIDOC_URI + "/scape/file";
 	private static final String ENDPOINT_METADATA = ESCIDOC_URI + "/scape/metadata";
 	private static final String ENDPOINT_LIFECYCLE = ESCIDOC_URI + "/scape/lifecycle";
 	private static final String ESCIDOC_USER = "sysadmin";
@@ -100,15 +102,11 @@ public class IntellectualentityIT {
 		resp = client.execute(get);
 		if (resp.getStatusLine().getStatusCode() != 200) {
 			logger.error(IOUtils.toString(resp.getEntity().getContent()));
-		}
-		if (resp.getStatusLine().getStatusCode() != 200) {
-			logger.error(IOUtils.toString(resp.getEntity().getContent()));
 			get.releaseConnection();
 			fail("server returned " + resp.getStatusLine().getStatusCode());
 		}
 		IntellectualEntity fetched = ScapeMarshaller.newInstance().deserialize(IntellectualEntity.class, resp.getEntity().getContent());
 		get.releaseConnection();
-		/* compare the fetched with the local entity */
 	}
 
 	@Test
@@ -264,7 +262,48 @@ public class IntellectualentityIT {
 
 	@Test
 	public void retrieveFile() throws Exception {
-		fail("Not yet implemented!");
+        ScapeMarshaller marshaller = ScapeMarshaller.newInstance();
+        
+        /* ingest test entity 1 */
+        IntellectualEntity e = TestUtil.createTestEntity();
+        ByteArrayOutputStream sink = new ByteArrayOutputStream();
+        marshaller.serialize(e, sink);
+        HttpPost post = new HttpPost(ENDPOINT_ENTITY);
+        post.setEntity(new InputStreamEntity(new ByteArrayInputStream(sink.toByteArray()), -1));
+        logger.debug("ingesting entity at " + post.getURI().toASCIIString());
+        HttpResponse resp = client.execute(post);
+        if (resp.getStatusLine().getStatusCode() != 200) {
+            logger.error(IOUtils.toString(resp.getEntity().getContent()));
+            post.releaseConnection();
+            fail("server returned " + resp.getStatusLine().getStatusCode());
+        }
+        String id = TestUtil.getPidFromResponse(resp);
+        
+        /* wait a bit so so escidoc has time to add the entity to it's index */
+        Thread.sleep(1000);
+
+        /* fetch the newly ingested entity from escidoc */
+        HttpGet get = new HttpGet(ENDPOINT_ENTITY + "/" + id);
+        logger.debug("fetching entity from " + get.getURI());
+        resp = client.execute(get);
+        if (resp.getStatusLine().getStatusCode() != 200) {
+            logger.error(IOUtils.toString(resp.getEntity().getContent()));
+            get.releaseConnection();
+            fail("server returned " + resp.getStatusLine().getStatusCode());
+        }
+        IntellectualEntity fetched = ScapeMarshaller.newInstance().deserialize(IntellectualEntity.class, resp.getEntity().getContent());
+        get.releaseConnection();
+
+        File f = fetched.getRepresentations().get(0).getFiles().get(0);
+        get = new HttpGet(ENDPOINT_FILE + "/" + f.getIdentifier().getValue());
+        client.execute(get);
+        if (resp.getStatusLine().getStatusCode() != 200) {
+            logger.error(IOUtils.toString(resp.getEntity().getContent()));
+            get.releaseConnection();
+            fail("server returned " + resp.getStatusLine().getStatusCode());
+        }
+        get.releaseConnection();
+        
 	}
 
 	@Test
