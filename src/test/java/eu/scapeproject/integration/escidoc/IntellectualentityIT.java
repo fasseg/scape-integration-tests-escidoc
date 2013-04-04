@@ -20,6 +20,7 @@ import org.apache.http.entity.InputStreamEntity;
 import org.apache.http.entity.StringEntity;
 import org.apache.http.impl.client.DefaultHttpClient;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.purl.dc.elements._1.ElementContainer;
 import org.purl.dc.elements._1.SimpleLiteral;
@@ -418,29 +419,35 @@ public class IntellectualentityIT {
     }
 
     @Test
+    @Ignore
     public void retrieveEntityVersionList() throws Exception {
         fail("Test not yet implemented");
     }
     @Test
+    @Ignore
     public void retrieveBitStream() throws Exception {
         fail("Test not yet implemented");
     }
     @Test
+    @Ignore
     public void searchFiles() throws Exception {
         fail("Test not yet implemented");
     }
 
     @Test
+    @Ignore
 	public void retrieveRepresentation() throws Exception {
         fail("Test not yet implemented");
 	}
 
 	@Test
+    @Ignore
 	public void updateRepresentation() throws Exception {
         fail("Test not yet implemented");
 	}
 
 	@Test
+    @Ignore
 	public void updateMetadata() throws Exception {
         fail("Test not yet implemented");
 	}
